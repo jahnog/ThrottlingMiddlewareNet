@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/CatalogApi/CatalogApi.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/ThrottlingMiddleware/ThrottlingMiddleware.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CatalogApi.Tests/CatalogApi.Tests.csproj" />
+    <Project Path="tests/ThrottlingMiddleware.Tests/ThrottlingMiddleware.Tests.csproj" />
+  </Folder>
+</Solution>
