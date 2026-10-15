@@ -5,4 +5,5 @@ obj/
 *.user
 TestResults/
 coverage/
+StrykerOutput/
 *.DotSettings.user
