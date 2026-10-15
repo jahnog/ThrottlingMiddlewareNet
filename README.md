@@ -1,8 +1,8 @@
 # ThrottlingMiddleware
 
-In-process throttling middleware for ASP.NET Core microservices on .NET 10.
+In-process throttling middleware for ASP.NET Core microservices on .NET 10. Register it with `AddThrottling`, then add `UseThrottling` to the pipeline. One rule from configuration admits each request.
 
-A request is admitted by one rule from configuration. Each rule has two gates:
+Each rule has two gates:
 
 - **Total** is the number of requests running or waiting. If it is full, the call gets **429** immediately.
 - **Active** is the number of requests inside the rest of the pipeline. A call that got a total slot and no active slot waits up to `maxSleep`. If the wait expires, the call gets **429** and the total slot is released.
@@ -11,9 +11,87 @@ A request is admitted by one rule from configuration. Each rule has two gates:
 
 Gates live in the process. Ten replicas enforce the limit ten times. Size `maxActiveRequests` from this process's own pools (threads, database connections, downstream calls). Keep `maxTotalRequests` a small multiple of that, and keep `maxSleep` under a typical client timeout.
 
+## Advantages
+
+Invalid options fail when the host starts, before it serves a request.
+
+## Commands
+
+Commands below name the directory they run from. Coverage files and the mutation report are build output.
+
+### Install
+
+The SDK for this repository is named in `global.json`: version `10.0.112`, with `rollForward` set to `latestFeature`.
+
+From the repository root, restore the library and the unit-test project, including ReportGenerator:
+
+```bash
+dotnet restore tests/ThrottlingMiddleware.Tests/ThrottlingMiddleware.Tests.csproj
+```
+
+From the repository root, restore the local tool `dotnet-stryker` 5.0.0:
+
+```bash
+dotnet tool restore
+```
+
+### Uninstall
+
+No uninstall command exists.
+
+### Run
+
+From the repository root, start the catalog sample:
+
+```bash
+dotnet run --project samples/CatalogApi
+```
+
+### Test
+
+From the repository root, run the unit tests for the library:
+
+```bash
+dotnet test tests/ThrottlingMiddleware.Tests
+```
+
+From the repository root, run every test project, including `tests/CatalogApi.Tests`:
+
+```bash
+dotnet test
+```
+
+### Debug
+
+No debug command exists.
+
+### Mutation test
+
+From `tests/ThrottlingMiddleware.Tests`:
+
+```bash
+dotnet stryker --since:master
+```
+
+### Reports
+
+From the repository root, write Cobertura for the unit tests:
+
+```bash
+dotnet test tests/ThrottlingMiddleware.Tests --collect:"XPlat Code Coverage;Format=cobertura" --results-directory TestResults
+```
+
+From the repository root, write the stable Cobertura file and the HTML index:
+
+```bash
+dotnet ~/.nuget/packages/reportgenerator/5.5.11/tools/net10.0/ReportGenerator.dll -reports:"TestResults/**/coverage.cobertura.xml" -targetdir:coverage -reporttypes:"Html;Cobertura" -sourcedirs:src/ThrottlingMiddleware
+```
+
+The Cobertura file is `coverage/Cobertura.xml`. The HTML index is `coverage/index.html`.
+
 ## Rules
 
-One rule handles each request:
+The rule is chosen in this order:
 
 1. An endpoint rule whose `METHOD /path` matches the route pattern.
 2. Otherwise a `remote_ip` rule, with a separate pair of gates per remote address.
@@ -81,7 +159,7 @@ A per-address rule looks like this. It takes over every route that does not matc
 
 Keys are `global`, `endpoint`, and `remote_ip`. Periods are `minute`, `hour`, and `day`. `maxSleep` may be zero, which means the active gate does not wait.
 
-A rejected call is HTTP 429 with `Retry-After` and a JSON body:
+The JSON body is:
 
 ```json
 {
@@ -96,7 +174,7 @@ Rejections are logged at Debug with the rule name and the reason (`total`, `slee
 
 ## Sample
 
-`samples/CatalogApi` is a small catalog service:
+`samples/CatalogApi` is a small catalog service. Start it with the run command.
 
 - `GET /items`
 - `POST /orders` with `{ "sku": "book", "quantity": 1 }` and optional `delayMs`
@@ -104,16 +182,12 @@ Rejections are logged at Debug with the rule name and the reason (`total`, `slee
 
 The sample trusts forwarded headers from loopback so tests can pass `X-Forwarded-For`. Do not copy that trust list into production.
 
-```bash
-dotnet run --project samples/CatalogApi
-```
-
 ## Tests
 
-```bash
-dotnet test
-```
+`tests/ThrottlingMiddleware.Tests` covers rule selection, validation, the gates, and the address table. Run it with the unit-test command.
 
-`tests/ThrottlingMiddleware.Tests` covers rule selection, validation, the gates, and the address table.
+`tests/CatalogApi.Tests` sends HTTP requests to `CatalogApi`, including the performance tests tagged `Category=Performance`. The command that runs every test project includes this project.
 
-`tests/CatalogApi.Tests` sends HTTP requests to `CatalogApi`, including the performance tests tagged `Category=Performance`.
+## License
+
+The license is MIT.
